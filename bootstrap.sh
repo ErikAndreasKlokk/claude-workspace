@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
 # bootstrap.sh — reconstruct the E:\Koder workspace inside the pod.
 #
-# Run from the workspace root (the checkout of claude-workspace). Clones each
-# project repo as a subdirectory, or fast-forwards it if already present. All
-# repos are public, so no credentials are needed to clone.
+# Best-effort: a single repo failing (e.g. a private repo with no token) is
+# logged and skipped, never aborts. Always exits 0 so the pod comes up.
+#
+# If GITHUB_TOKEN is set, git is configured to use it for github.com — this
+# enables cloning private repos AND pushing (public repos clone anonymously
+# but still need auth to push).
 #
 #   ./bootstrap.sh
 #
-set -euo pipefail
+set -uo pipefail
+export GIT_TERMINAL_PROMPT=0   # fail fast instead of hanging on an auth prompt
 
-# Directory this script lives in == workspace root.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-# folder<TAB>clone-url  (PortfolioV2 folder tracks the renamed "Portfolio" repo)
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  git config --global \
+    url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf \
+    "https://github.com/"
+  echo ">> GitHub token configured for github.com (clone + push enabled)"
+else
+  echo ">> no GITHUB_TOKEN — public repos only, pushing will fail"
+fi
+
+# folder|clone-url  (PortfolioV2 folder tracks the renamed "Portfolio" repo)
 REPOS=(
   "bolig|https://github.com/ErikAndreasKlokk/Bolig.git"
   "Budgeting|https://github.com/ErikAndreasKlokk/Budgeting.git"
@@ -23,17 +35,26 @@ REPOS=(
   "PortfolioV2|https://github.com/ErikAndreasKlokk/Portfolio.git"
 )
 
+skipped=""
 for entry in "${REPOS[@]}"; do
   dir="${entry%%|*}"
   url="${entry##*|}"
   if [ -d "$dir/.git" ]; then
     echo ">> $dir exists — fetching + fast-forward"
-    git -C "$dir" fetch --quiet origin
-    git -C "$dir" pull --ff-only || echo "   ($dir has local work; skipped ff)"
+    git -C "$dir" fetch --quiet origin && git -C "$dir" pull --ff-only \
+      || echo "   ($dir: pull skipped — local work or offline)"
   else
     echo ">> cloning $dir"
-    git clone --quiet "$url" "$dir"
+    if ! git clone --quiet "$url" "$dir"; then
+      echo "   !! could not clone $dir (private without token, or offline) — skipping"
+      skipped+=" $dir"
+    fi
   fi
 done
 
-echo "Done. Workspace ready at $ROOT"
+if [ -n "$skipped" ]; then
+  echo "Workspace ready at $ROOT (skipped:$skipped)"
+else
+  echo "Workspace ready at $ROOT"
+fi
+exit 0
