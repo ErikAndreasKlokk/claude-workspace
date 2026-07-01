@@ -31,7 +31,6 @@ REPOS=(
   "Budgeting|https://github.com/ErikAndreasKlokk/Budgeting.git"
   "KlokkProjects|https://github.com/ErikAndreasKlokk/KlokkProjects.git"
   "homelab|https://github.com/ErikAndreasKlokk/homelab.git"
-  "moviejus|https://github.com/Herjuus/moviejus.git"
   "PortfolioV2|https://github.com/ErikAndreasKlokk/Portfolio.git"
 )
 
