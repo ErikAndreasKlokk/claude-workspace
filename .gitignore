@@ -1,0 +1,16 @@
+# The project repos are cloned in by bootstrap.sh — they are their own
+# git repos and must NOT be tracked by claude-workspace.
+/bolig/
+/Budgeting/
+/KlokkProjects/
+/homelab/
+/moviejus/
+/PortfolioV2/
+
+# Claude Code runtime/auth state (lives on the PVC, never in git)
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/projects/
+.claude/todos/
+.claude/statsig/
+.claude/shell-snapshots/
